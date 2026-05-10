@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import sys
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -37,7 +38,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_true(os.getenv("DEBUG"))
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", None).split(",")]
+ALLOWED_HOSTS = [host for host in os.getenv("ALLOWED_HOSTS", "").replace(" ","").split(",")]
 
 
 # Application definition
@@ -137,10 +138,30 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "uploads"
 
+TESTING = "test" in sys.argv or "PYTEST_VERSION" in os.environ
+
 if DEBUG:
-    INSTALLED_APPS += ["silk",]
-    MIDDLEWARE.append("silk.middleware.SilkyMiddleware")
+    INSTALLED_APPS += [
+        "silk",
+    ]
+    MIDDLEWARE += [
+        "silk.middleware.SilkyMiddleware",
+    ]
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
+    
+    #Django debug toolbar config
+    INTERNAL_IPS = ["127.0.0.1"]
+    
+    if not TESTING:
+        INSTALLED_APPS = [
+            *INSTALLED_APPS,
+            "debug_toolbar",
+        ]
+        MIDDLEWARE = [
+            "debug_toolbar.middleware.DebugToolbarMiddleware",
+            *MIDDLEWARE,
+        ]
+        SHOW_TOOLBAR_CALLBACK = "debug_toolbar.middleware.show_toolbar_with_docker"
